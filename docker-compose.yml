@@ -1,0 +1,18 @@
+services:
+  mood:
+    build: .
+    container_name: mood
+    restart: unless-stopped
+    ports:
+      - "4400:4400"
+    environment:
+      - PORT=4400
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4400/api/state"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

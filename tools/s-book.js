@@ -1,0 +1,2 @@
+﻿(async()=>{const s=ms=>new Promise(r=>setTimeout(r,ms));const f=document.querySelector('form[data-form=welcome]');if(f){const set=(el,v)=>{Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set.call(el,v);el.dispatchEvent(new Event('input',{bubbles:true}))};set(document.querySelector('#w-name'),'Luciano Correa');set(document.querySelector('#w-phone'),'2604000000');f.requestSubmit();await s(500);}location.hash='#/reservar';await s(900);await s(2800);return document.body.innerText.slice(0,120)})()
+

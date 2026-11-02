@@ -1,0 +1,9 @@
+# Datos locales y artefactos (no van al repo)
+data/
+backups/
+backup/
+shots/
+apk/
+*.log
+.env
+tmpdemo*

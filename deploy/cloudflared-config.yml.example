@@ -1,0 +1,19 @@
+# Túnel nombrado de Cloudflare (URL fija, sin abrir puertos)
+#
+#   cloudflared tunnel login
+#   cloudflared tunnel create mood
+#   cloudflared tunnel route dns mood mood.tudominio.com
+#
+# Copiá la config a %USERPROFILE%\.cloudflared\config.yml (Windows)
+# o /etc/cloudflared/config.yml (Linux) y ejecutá:
+#   cloudflared service install
+#
+# El UUID y el archivo de credenciales salen de `cloudflared tunnel create`.
+
+tunnel: REEMPLAZAR-UUID
+credentials-file: C:\Users\TU-USUARIO\.cloudflared\REEMPLAZAR-UUID.json
+
+ingress:
+  - hostname: mood.tudominio.com
+    service: http://localhost:4400
+  - service: http_status:404

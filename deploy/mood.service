@@ -1,0 +1,25 @@
+# Copiá este archivo a /etc/systemd/system/mood.service
+# Ajustá User, WorkingDirectory y PUBLIC_URL.
+
+[Unit]
+Description=MOOD Training Club (PWA + API)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mood
+Group=mood
+WorkingDirectory=/opt/mood
+Environment=NODE_ENV=production
+Environment=PORT=4400
+Environment=PUBLIC_URL=https://mood.tudominio.com
+# Environment=MP_ACCESS_TOKEN=APP_USR-...
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: mood-training-club
+    runtime: node
+    plan: free
+    buildCommand: "echo sin dependencias"
+    startCommand: "node server.js"
+    healthCheckPath: /api/state
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # Carga reservas de ejemplo si la base está vacía (para la demo al dueño).
+      - key: MOOD_DEMO
+        value: "1"

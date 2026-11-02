@@ -1,0 +1,7 @@
+# Copiá a /etc/caddy/Caddyfile y cambiá el dominio.
+# Caddy pide el certificado HTTPS solo.
+
+mood.tudominio.com {
+    encode gzip
+    reverse_proxy 127.0.0.1:4400
+}
