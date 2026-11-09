@@ -2,8 +2,10 @@ services:
   - type: web
     name: mood-training-club
     runtime: node
-    # El disco persistente (para SQLite) solo existe en planes pagos. "starter" es el más chico.
-    plan: starter
+    # Plan gratis: no tiene disco persistente. La base SQLite se reinicia en cada deploy
+    # o reinicio del servidor. Para uso real: plan "starter" + disco montado en /var/data
+    # y la variable MOOD_DATA=/var/data (ver LEEME-DEPLOY.md, opción D).
+    plan: free
     region: oregon
     buildCommand: "echo sin dependencias"
     startCommand: "node server.js"
@@ -12,10 +14,3 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
-      # La base SQLite y las imágenes subidas viven en el disco, no en el filesystem efímero.
-      - key: MOOD_DATA
-        value: /var/data
-    disk:
-      name: mood-data
-      mountPath: /var/data
-      sizeGB: 1
