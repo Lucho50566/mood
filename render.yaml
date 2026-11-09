@@ -2,7 +2,9 @@ services:
   - type: web
     name: mood-training-club
     runtime: node
-    plan: free
+    # El disco persistente (para SQLite) solo existe en planes pagos. "starter" es el más chico.
+    plan: starter
+    region: oregon
     buildCommand: "echo sin dependencias"
     startCommand: "node server.js"
     healthCheckPath: /api/state
@@ -10,6 +12,10 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
-      # Carga reservas de ejemplo si la base está vacía (para la demo al dueño).
-      - key: MOOD_DEMO
-        value: "1"
+      # La base SQLite y las imágenes subidas viven en el disco, no en el filesystem efímero.
+      - key: MOOD_DATA
+        value: /var/data
+    disk:
+      name: mood-data
+      mountPath: /var/data
+      sizeGB: 1
