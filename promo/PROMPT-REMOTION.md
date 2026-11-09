@@ -59,7 +59,7 @@ Los textos van en español rioplatense, cortos y en mayúsculas cuando son títu
 6. **21–25 s · Rutina y pagos.** Scroll rápido de `inicio.png` mientras pasan tres frases:
    "Tu rutina se reserva sola" · "Pagá tu abono con Mercado Pago" · "Desbloqueá logros".
 7. **25–30 s · Cierre.** Fondo negro con el brillo magenta, logo centrado y botón magenta
-   **"INSTALÁ LA APP"**. Debajo, el link: **[PEGAR ACÁ EL LINK HTTPS DE LA APP]**
+   **"INSTALÁ LA APP"**. Debajo, el link: **mood-training-club.onrender.com**
    y "@[PEGAR ACÁ EL INSTAGRAM DEL GYM]". Terminá con el logo latiendo una sola vez.
 
 ## Audio
@@ -75,6 +75,6 @@ Los textos van en español rioplatense, cortos y en mayúsculas cuando son títu
 ---
 
 ## Antes de pegarlo
-- Reemplazá **[PEGAR ACÁ EL LINK HTTPS DE LA APP]** por la URL pública (dominio o túnel).
+- El link de la app ya está puesto (https://mood-training-club.onrender.com). Si pasás a un dominio propio, cambialo.
 - Reemplazá **[PEGAR ACÁ EL INSTAGRAM DEL GYM]** por la cuenta real.
 - Si cambiás algo de la app, regenerá las capturas antes de hacer el video.
