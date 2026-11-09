@@ -21,8 +21,23 @@
 <div class="bg" aria-hidden="true">
   <span class="glow g1"></span>
   <span class="glow g2"></span>
-  <span class="grain"></span>
 </div>
+
+<div id="splash" class="splash" aria-hidden="true">
+  <div class="splash-in">
+    <img src="img/logo.jpg" alt="" class="splash-logo">
+    <div class="splash-word">MOOD</div>
+    <div class="splash-sub">Training Club</div>
+    <div class="splash-bar"><i></i></div>
+  </div>
+</div>
+<script>
+  window.__moodT0 = Date.now();
+  try {
+    if (sessionStorage.getItem('mood.splash')) document.getElementById('splash').remove();
+    else sessionStorage.setItem('mood.splash', '1');
+  } catch (_) {}
+</script>
 
 <main id="app" class="app"></main>
 

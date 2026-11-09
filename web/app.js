@@ -135,6 +135,76 @@
 
   const canCancel = (b) => Date.now() <= startMs(b.date, b.time) - Number(state.club.cancelMinutes || 0) * 60000;
 
+  /* ---------- Racha y logros ---------- */
+  const weekStart = (s) => { const d = parseD(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dstr(d); };
+
+  function stats() {
+    const done = state.bookings.filter((b) => b.status === 'active' && started(b.date, b.time));
+    const weeks = new Set(done.map((b) => weekStart(b.date)));
+    const thisW = weekStart(todayStr());
+    const thisWeekDone = weeks.has(thisW);
+    let streak = 0;
+    for (let w = thisWeekDone ? thisW : addDays(thisW, -7); weeks.has(w); w = addDays(w, -7)) streak++;
+    let best = 0, run = 0, prev = null;
+    for (const w of [...weeks].sort()) { run = prev && addDays(prev, 7) === w ? run + 1 : 1; best = Math.max(best, run); prev = w; }
+    const plannedThisWeek = state.bookings.some((b) => b.status === 'active' && !started(b.date, b.time) && weekStart(b.date) === thisW);
+    const track = [];
+    for (let i = 7; i >= 0; i--) {
+      const ws = addDays(thisW, -7 * i);
+      track.push({ ws, on: weeks.has(ws), now: i === 0, planned: i === 0 && !weeks.has(ws) && plannedThisWeek });
+    }
+    const month = todayStr().slice(0, 7);
+    const monthDone = done.filter((b) => b.date.startsWith(month));
+    const mins = monthDone.reduce((a, b) => a + activityOf(b.activityId).durationMin, 0);
+    const freq = {};
+    for (const b of monthDone) freq[b.activityId] = (freq[b.activityId] || 0) + 1;
+    const favId = Object.keys(freq).sort((a, b) => freq[b] - freq[a])[0];
+    return {
+      done: done.length, streak, best, thisWeekDone, plannedThisWeek, track,
+      monthCount: monthDone.length, hours: Math.round(mins / 6) / 10,
+      fav: favId ? activityOf(favId) : null,
+      kinds: new Set(done.map((b) => b.activityId)).size,
+      early: done.filter((b) => toMin(b.time) < 8 * 60).length,
+    };
+  }
+
+  function achievements(st) {
+    return [
+      { id: 'first', name: 'Primer paso', desc: 'Tu primera clase', cur: st.done, goal: 1, icon: 'check' },
+      { id: 'ten', name: 'Diez de diez', desc: '10 clases completadas', cur: st.done, goal: 10, icon: 'flame' },
+      { id: 'twentyfive', name: 'Imparable', desc: '25 clases completadas', cur: st.done, goal: 25, icon: 'arrowUp' },
+      { id: 'streak4', name: 'Un mes firme', desc: '4 semanas seguidas', cur: st.best, goal: 4, icon: 'repeat' },
+      { id: 'streak8', name: 'Hábito MOOD', desc: '8 semanas seguidas', cur: st.best, goal: 8, icon: 'cal' },
+      { id: 'early', name: 'Madrugador', desc: '5 clases antes de las 8', cur: st.early, goal: 5, icon: 'clock' },
+      { id: 'kinds', name: 'Todo terreno', desc: 'Probá 3 actividades', cur: st.kinds, goal: 3, icon: 'users' },
+    ].map((a) => ({ ...a, cur: Math.min(a.cur, a.goal), got: a.cur >= a.goal }));
+  }
+
+  function streakMsg(st) {
+    if (st.thisWeekDone) return '¡Semana cumplida! Seguí así.';
+    if (st.plannedThisWeek) return st.streak ? 'Tu turno de esta semana mantiene la racha.' : 'Tu turno de esta semana arranca la racha.';
+    return st.streak ? 'Entrená esta semana para no cortar la racha.' : 'Reservá una clase esta semana y arrancá tu racha.';
+  }
+
+  function streakCard(link) {
+    const st = stats();
+    const tag = link ? 'a' : 'div';
+    return `<${tag} class="card streak" ${link ? 'href="#/perfil"' : ''}>
+      <div class="streak-top">
+        <div class="streak-num"><span class="streak-flame ${st.streak ? 'lit' : ''}">${I.flame}</span><b>${st.streak}</b></div>
+        <div class="streak-label"><span class="display">${st.streak === 1 ? 'SEMANA' : 'SEMANAS'}<br>SEGUIDAS</span><small>${esc(streakMsg(st))}</small></div>
+      </div>
+      <div class="track" aria-label="Últimas 8 semanas">
+        ${st.track.map((w, i) => `<i class="${w.on ? 'on' : ''} ${w.now ? 'now' : ''} ${w.planned ? 'planned' : ''}" style="--i:${i}" title="Semana del ${w.ws.split('-').reverse().slice(0, 2).join('/')}"></i>`).join('')}
+      </div>
+      <div class="streak-foot">
+        <span><b>${st.monthCount}</b> clases este mes</span>
+        <span><b>${String(st.hours).replace('.', ',')}</b> h</span>
+        ${st.fav ? `<span><i class="dot" style="background:${st.fav.color}"></i>${esc(st.fav.name)}</span>` : ''}
+      </div>
+    </${tag}>`;
+  }
+
   function canAfford(act) {
     const cost = Number(act.credits == null ? 1 : act.credits);
     return unlimited() || creditsLeft() >= cost;
@@ -149,10 +219,14 @@
     if (session.past) return toast('Ese turno ya pasó', 'err');
     if (session.full) return toast('No quedan lugares en ese turno', 'err');
     try {
-      await api('/api/book', { method: 'POST', body: JSON.stringify({ memberId: me().id, date: session.date, time: session.time, activityId: session.activityId }) });
+      const r = await api('/api/book', { method: 'POST', body: JSON.stringify({ memberId: me().id, date: session.date, time: session.time, activityId: session.activityId }) });
       closeSheet();
       await refresh();
-      toast('¡Turno reservado!');
+      const bk = (r && r.booking && state.bookings.find((b) => b.id === r.booking.id)) || (r && r.booking);
+      if (bk && bk.code) {
+        if (navigator.vibrate) navigator.vibrate([18, 40, 28]);
+        sheetTicket(bk);
+      } else toast('¡Turno reservado!');
     } catch (e) {
       if (e.data && e.data.noCredits) { closeSheet(); openSheet(noCreditsSheet()); return; }
       toast(e.message, 'err');
@@ -245,7 +319,7 @@
 
   function renderNav(active) {
     navEl.innerHTML = `<div class="nav-inner">${TABS.map((t) => `
-      <a href="${t.href}" class="${t.id === active ? 'on' : ''}">${I[t.icon]}<span>${t.label}</span></a>`).join('')}</div>`;
+      <a href="${t.href}" class="${t.id === active ? 'on' : ''}"${t.id === active ? ' aria-current="page"' : ''}>${t.id === active ? '<i class="nav-ind"></i>' : ''}${I[t.icon]}<span>${t.label}</span></a>`).join('')}</div>`;
     navEl.hidden = active === 'bienvenida' || active === 'admin';
   }
 
@@ -390,6 +464,8 @@
       ${header()}
       ${hero}
 
+      ${streakCard(true)}
+
       ${news.length ? `<div class="section-head"><span class="pill-title">NOVEDADES</span></div>
       <div class="news-strip">${news.slice(0, 6).map(newsCard).join('')}</div>` : ''}
 
@@ -468,10 +544,10 @@
       : s.past || s.full
         ? `<button class="btn btn-ghost btn-sm" disabled>${s.full ? 'Lleno' : '—'}</button>`
         : `<button class="btn btn-primary btn-sm" data-action="ask-book" data-key="${s.key}">RESERVAR</button>`;
-    return `<div class="${cls}">
+    return `<div class="${cls}" style="--c:${esc(s.activity.color)}">
       <div class="ses-time"><b>${s.time}</b><span>${s.activity.durationMin} min</span></div>
       <div style="min-width:0">
-        <div class="ses-name"><span class="dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${s.activity.color};margin-right:6px;vertical-align:1px"></span>${esc(s.activity.name)}</div>
+        <div class="ses-name"><span class="ses-dot"></span>${esc(s.activity.name)}</div>
         <div class="ses-sub"><span>${s.booked}/${s.capacity} anotados</span><span class="sep">·</span><span>${s.activity.credits > 0 ? `${s.activity.credits} crédito${s.activity.credits === 1 ? '' : 's'}` : 'incluida'}</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
       </div>
@@ -738,9 +814,9 @@
     const p = plan();
     const m = me() || {};
     const initial = (m.name || 'M').trim().charAt(0).toUpperCase();
-    const mine = state.bookings;
-    const done = mine.filter((b) => b.status === 'active' && started(b.date, b.time)).length;
-    const upcoming = mine.filter((b) => b.status === 'active' && !started(b.date, b.time)).length;
+    const st = stats();
+    const ach = achievements(st);
+    const got = ach.filter((a) => a.got).length;
     return `<div class="view">
       ${header()}
       <div class="section-head" style="margin-top:6px"><h1 class="display h1">PERFIL</h1></div>
@@ -755,10 +831,23 @@
         </div>
         <div class="divider"></div>
         <div class="row" style="justify-content:space-between">
-          <div class="stat"><b>${upcoming}</b><span>Próximos</span></div>
-          <div class="stat"><b>${done}</b><span>Completados</span></div>
+          <div class="stat"><b class="${st.streak ? 'pink' : ''}">${st.streak}</b><span>Racha (sem.)</span></div>
+          <div class="stat"><b>${st.done}</b><span>Completadas</span></div>
           <div class="stat"><b>${p && p.credits == null ? '∞' : (p ? creditsLeft() : 0)}</b><span>Créditos</span></div>
         </div>
+      </div>
+
+      <div class="section-head"><span class="pill-title">TU MES EN MOOD</span></div>
+      ${streakCard()}
+
+      <div class="section-head"><span class="pill-title">LOGROS</span><span class="link">${got} de ${ach.length}</span></div>
+      <div class="achs">
+        ${ach.map((a) => `<div class="ach ${a.got ? 'got' : ''}">
+          <span class="ach-ico">${I[a.icon]}</span>
+          <b>${esc(a.name)}</b>
+          <small>${esc(a.desc)}</small>
+          ${a.got ? '<span class="ach-ok">Logrado</span>' : `<div class="bar"><i style="width:${Math.round((a.cur / a.goal) * 100)}%"></i></div><span class="ach-prog">${a.cur} / ${a.goal}</span>`}
+        </div>`).join('')}
       </div>
 
       <div class="section-head"><span class="pill-title">TU ABONO</span><a class="link" href="#/abonos">${p ? 'Renovar' : 'Contratar'}</a></div>
@@ -817,6 +906,40 @@
       <button class="btn btn-primary btn-lg mt14" data-action="do-book" data-key="${s.key}" ${!canAfford(s.activity) ? 'disabled' : ''}>CONFIRMAR TURNO</button>
       <button class="btn btn-ghost btn-block mt10" data-action="close-sheet">Volver</button>
       <p class="tiny muted center mt10">Al reservar aceptás el código de convivencia del club.</p>
+    `);
+  }
+
+  function sheetTicket(b) {
+    const act = activityOf(b.activityId);
+    const d = parseD(b.date);
+    const st = stats();
+    const thisWeek = weekStart(b.date) === weekStart(todayStr());
+    const streakLine = thisWeek && !st.thisWeekDone
+      ? (st.streak ? `Esta clase sostiene tu racha de ${st.streak} semana${st.streak === 1 ? '' : 's'}.` : 'Esta clase arranca tu racha.')
+      : st.streak ? `Racha actual: ${st.streak} semana${st.streak === 1 ? '' : 's'}.` : 'Entrená esta semana para arrancar tu racha.';
+    openSheet(`
+      <div class="grab"></div>
+      <div class="ticket" style="--c:${esc(act.color)}">
+        <div class="ticket-main">
+          <span class="stamp">Confirmado</span>
+          <h3 class="display ticket-act">${esc(act.name)}</h3>
+          <div class="ticket-when">
+            <div><b>${d.getDate()}</b><span>${MONTH[d.getMonth()]}</span></div>
+            <div><b>${b.time}</b><span>${WEEK_LONG[d.getDay()]}</span></div>
+            <div><b>${act.durationMin}</b><span>minutos</span></div>
+          </div>
+        </div>
+        <div class="ticket-cut" aria-hidden="true"></div>
+        <div class="ticket-foot">
+          <div><span class="tiny muted">Código para recepción</span><div class="code ticket-code">${esc(b.code)}</div></div>
+          <span class="ticket-streak">${I.flame}</span>
+        </div>
+      </div>
+      <p class="small center mt14 ticket-msg">${esc(streakLine)}</p>
+      <div class="row mt14" style="gap:8px">
+        <a class="btn btn-ghost" style="flex:1" href="${calendarUrl(b)}" target="_blank" rel="noreferrer">${I.ics} Calendario</a>
+        <button class="btn btn-primary" style="flex:1" data-action="close-sheet">LISTO</button>
+      </div>
     `);
   }
 
@@ -1541,7 +1664,19 @@
 
   sheetEl.addEventListener('click', (e) => { if (e.target.classList.contains('ov')) closeSheet(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
-  window.addEventListener('hashchange', () => render());
+  // Transición entre pantallas (View Transitions). La dirección sigue el orden de las pestañas.
+  const TAB_ORDER = { inicio: 0, reservar: 1, rutina: 1, turnos: 2, perfil: 3, abonos: 3, admin: 4 };
+  let lastRoute = route().name;
+  const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.addEventListener('hashchange', () => {
+    const next = route().name;
+    const dir = (TAB_ORDER[next] ?? 0) - (TAB_ORDER[lastRoute] ?? 0);
+    const same = next === lastRoute;
+    lastRoute = next;
+    if (!document.startViewTransition || calm() || same) return render();
+    document.documentElement.dataset.dir = dir < 0 ? 'back' : 'fwd';
+    document.startViewTransition(() => render());
+  });
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     installEvt = e;
@@ -1558,6 +1693,7 @@
     catch (e) {
       app.innerHTML = viewOffline(e.message);
       renderNav('bienvenida');
+      hideSplash();
       return;
     }
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
@@ -1565,7 +1701,16 @@
     }
     if (!state.member) location.hash = '#/bienvenida';
     render();
+    hideSplash();
     checkPaymentStatus();
+  }
+
+  function hideSplash() {
+    const sp = document.getElementById('splash');
+    if (!sp) return;
+    const shown = Date.now() - (window.__moodT0 || 0);
+    const wait = calm() ? 0 : Math.max(0, 1100 - shown);
+    setTimeout(() => { sp.classList.add('out'); setTimeout(() => sp.remove(), 520); }, wait);
   }
 
   boot();

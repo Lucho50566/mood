@@ -1,5 +1,5 @@
 /* MOOD · Training Club — service worker (PWA) */
-const CACHE = 'mood-v2.3';
+const CACHE = 'mood-v2.4';
 const SHELL = [
   './',
   './index.html',

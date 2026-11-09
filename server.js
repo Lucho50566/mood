@@ -329,7 +329,7 @@ function publicState(memberId) {
     schedule: store.schedule(),
     news: store.news().filter((n) => n.active !== false),
     member: m ? { id: m.id, name: m.name, phone: m.phone, planId: m.planId, creditsLeft: m.creditsLeft } : null,
-    bookings: m ? store.memberBookings(m.id, addDays(today, -60)).map((b) => ({ ...b, member: 'me' })) : [],
+    bookings: m ? store.memberBookings(m.id, addDays(today, -180)).map((b) => ({ ...b, member: 'me' })) : [],
     routine: m ? store.routine(m.id) : { items: [] },
     counts: store.countsRange(today, addDays(today, 35)),
     payments: m ? store.paymentsForMember(m.id, 12).map((p) => ({ id: p.id, planId: p.planId, amount: p.amount, status: p.status, createdAt: p.createdAt })) : [],

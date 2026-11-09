@@ -18,6 +18,9 @@ el club administra desde el celular y los pagos se confirman en el servidor.
 - **Mis turnos**: código para recepción, Google Calendar y cancelación (con devolución de créditos).
 - **Abonos**: pagar con **Mercado Pago** (Checkout Pro o link de pago) o avisar pago en efectivo.
 - **Perfil**: datos, créditos, historial de pagos, instalar la app y modo administración.
+- **Racha y logros** (v2.4): semanas seguidas entrenando, "Tu mes en MOOD" (clases, horas y
+  actividad favorita) y 7 logros con progreso. Se calculan con los últimos 180 días de turnos.
+- **Ticket animado** al reservar, con el color de la actividad y el código para recepción.
 
 ### Club (Admin, PIN `1234`)
 - **Agenda** por día: reservas de cada clase, cupos y quitar reservas.
